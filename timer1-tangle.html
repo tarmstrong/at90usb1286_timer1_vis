@@ -34,9 +34,14 @@
           this.wgm11 = 0;
           this.wgm10 = 1;
           this.icr1 = 100;
+          this.com1a1 = 1;
+          this.com1a0 = 0;
         },
         update: function () {
           var not_implemented = false;
+
+          // Compare output mode is determined by bits COM1A[1:0]
+          this.com = (this.com1a1 << 1) | (this.com1a0 << 0);
 
           // The clock select is determined by bits CS[2:0]
           this.csmode = (this.cs12 << 2) | (this.cs11 << 1) | (this.cs10 << 0);
@@ -53,8 +58,20 @@
           default: not_implemented = true; break;
           }
 
-          timer1_graph(this.ocr1a, this.top, not_implemented);
+          var code = document.getElementById('editor').value;
+          eval(code);
+          timer1_graph(this.ocr1a, this.top, this.com, not_implemented);
         }
+      });
+      window.addEvent('keyup', function () {
+          try {
+          var code = document.getElementById('editor').value;
+          eval(code);
+          timer1_graph(tangle.getValue('ocr1a'), tangle.getValue('top'), tangle.getValue('com'), false);
+          }
+          catch (e) {
+            document.getElementById('debug').innerHTML = e;
+          }
       });
     }
 
@@ -74,6 +91,11 @@
     }
     #timer-vis-plot {
       margin-left: 40px;
+    }
+    #editor {
+      float: left;
+      width: 500px;
+      height: 800px;
     }
   </style>
 </head>
@@ -100,8 +122,8 @@
       </thead>
       <tr>
         <td>TCCR1A</td>
-        <td><input type='checkbox' name='com1a1' checked disabled /></td>
-        <td><input type='checkbox' name='com1a0' /></td>
+        <td><span data-var='com1a1' class='TKToggle'></span> </td>
+        <td><span data-var='com1a0' class='TKToggle'></span> </td>
         <td><input type='checkbox' name='com1b1' disabled /></td>
         <td><input type='checkbox' name='com1b0' disabled /></td>
         <td><input type='checkbox' name='com1c1' disabled /></td>
@@ -150,6 +172,13 @@
   </div>
     <canvas id='timer-vis-plot'>
     </canvas>
+  </div>
+
+  <div>
+    <textarea id='editor'>
+    </textarea>
+    <pre id='debug'>
+    </pre>
   </div>
 
 </body>
