@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<title>Test thing</title>
+<script src="Tangle/TangleKit/mootools.js"></script>
+<script src="Tangle/Tangle.js"></script>
+<script src="graph.js"></script>
+<script>
+(function () {
+//window.addEvent('keyup', function () {
+//  try {
+//    var editor = document.getElementById('editor-timer-vis');
+//    eval(editor.value);
+//  }
+//  catch (e) {
+//    document.getElementById('debug').innerHTML = "<pre>" + e + "</pre>";
+//  }
+//});
+window.addEvent('domready', function () {
+    var container = document.getElementById("timer-vis");
+    var tangle = new Tangle(container, {
+      initialize: function () {
+        this.ocr1a = 0x7F;
+        this.top = 0xFF;
+      },
+      update: function () {
+        timer1_graph(this.ocr1a, this.top);
+      }
+    });
+  });
+}());
+</script>
+<body>
+  <h1>This is it.</h1>
+
+  <textarea id='editor-timer-vis'>
+  </textarea>
+
+  <div id='timer-vis'>
+    <p class='explanation'>
+    If the compare output mode (COM) is x, then the value of OCR1A (e.g. <span data-var="ocr1a" data-format="%x" class="TKAdjustableNumber">0x7F</span>) is the value of TCNT after which it sets the OC1A pin to HIGH.
+    </p>
+    <canvas id='timer-vis-plot'>
+    </canvas>
+  </div>
+
+  <div id='debug'>
+  </div>
+
+

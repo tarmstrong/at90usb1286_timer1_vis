@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Tangle document</title>
+
+	<!-- Tangle -->
+	<script type="text/javascript" src="Tangle.js"></script>
+
+	<!-- TangleKit (optional) -->
+	<link rel="stylesheet" href="TangleKit/TangleKit.css" type="text/css">
+	<script type="text/javascript" src="TangleKit/mootools.js"></script>
+	<script type="text/javascript" src="TangleKit/sprintf.js"></script>
+	<script type="text/javascript" src="TangleKit/BVTouchable.js"></script>
+	<script type="text/javascript" src="TangleKit/TangleKit.js"></script>
+
+	<script type="text/javascript" src="graph.js"></script>
+
+	<!-- example -->
+	<script type="text/javascript">
+
+    function setUpTangle () {
+
+      var container = document.getElementById("timer-vis");
+      var tangle = new Tangle(container, {
+        initialize: function () {
+          this.ocr1a = 0xfffF;
+          this.top = 0xFF;
+          this.cs10 = 0;
+          this.cs11 = 1;
+          this.cs12 = 0;
+          this.wgm13 = 0;
+          this.wgm12 = 1;
+          this.wgm11 = 0;
+          this.wgm10 = 1;
+          this.icr1 = 100;
+        },
+        update: function () {
+          var not_implemented = false;
+
+          // The clock select is determined by bits CS[2:0]
+          this.csmode = (this.cs12 << 2) | (this.cs11 << 1) | (this.cs10 << 0);
+
+          // The WGM mode is determined by bits WGM1[3:0]
+          this.wgmmode = (this.wgm13 << 3) | (this.wgm12 << 2) | (this.wgm11 << 1) | (this.wgm10 << 0);
+
+          switch (this.wgmmode) {
+          case 5: this.top = 0xFF; break;
+          case 6: this.top = 0x1FF; break;
+          case 7: this.top = 0x3FF; break;
+          case 14: this.top = this.icr1; break;
+          case 15: this.top = this.ocr1a; break;
+          default: not_implemented = true; break;
+          }
+
+          timer1_graph(this.ocr1a, this.top, not_implemented);
+        }
+      });
+    }
+
+	</script>
+  <style>
+    table.reg-control td {
+      font-size: 8px;
+      padding: 0px 0px 0px 0px;
+      margin: 0 0 0 0 ;
+      text-align: center;
+      max-width: 70px;
+      width: 70px;
+    }
+    #timer-vis .controls {
+      float:left;
+      width: 500px;
+    }
+    #timer-vis-plot {
+      margin-left: 40px;
+    }
+  </style>
+</head>
+
+<body onload="setUpTangle();">
+
+  <span data-var='asdf' class='TKToggle'></span>
+	<p>This is a simple reactive document.</p>
+
+  <div id='timer-vis'>
+    <div class='controls'>
+    <p>
+    <table class='reg-control'>
+      <thead>
+        <td></td>
+        <td>COM1A1</td>
+        <td>COM1A0</td>
+        <td>COM1B1</td>
+        <td>COM1B0</td>
+        <td>COM1C1</td>
+        <td>COM1C0</td>
+        <td>WGM11</td>
+        <td>WGM10</td>
+      </thead>
+      <tr>
+        <td>TCCR1A</td>
+        <td><input type='checkbox' name='com1a1' checked disabled /></td>
+        <td><input type='checkbox' name='com1a0' /></td>
+        <td><input type='checkbox' name='com1b1' disabled /></td>
+        <td><input type='checkbox' name='com1b0' disabled /></td>
+        <td><input type='checkbox' name='com1c1' disabled /></td>
+        <td><input type='checkbox' name='com1c0' disabled /></td>
+        <td><span data-var='wgm11' class='TKToggle'></span> </td>
+        <td><span data-var='wgm10' class='TKToggle'></span> </td>
+      </tr>
+    </table>
+    <table class='reg-control'>
+      <thead>
+        <td></td>
+        <td>ICNC1</td>
+        <td>ICES1</td>
+        <td>-</td>
+        <td>WGM13</td>
+        <td>WGM12</td>
+        <td>CS12</td>
+        <td>CS11</td>
+        <td>CS10</td>
+      </thead>
+      <tr>
+        <td>TCCR1B</td>
+        <td><input type='checkbox' name='icnc1' disabled /></td>
+        <td><input type='checkbox' name='ices1' disabled /></td>
+        <td><input type='checkbox' name='none' disabled /></td>
+        <td><span data-var='wgm13' class='TKToggle'></span> </td>
+        <td><span data-var='wgm12' class='TKToggle'></span> </td>
+        <td><span data-var='cs12' class='TKToggle'></span> </td>
+        <td><span data-var='cs11' class='TKToggle'></span> </td>
+        <td><span data-var='cs10' class='TKToggle'></span> </td>
+      </tr>
+    </table>
+    </p>
+    <p>
+    The clock select is set to <span data-var='csmode'></span>.
+    </p>
+    <p>
+    The wave generation mode is set to <span data-var='wgmmode'></span>.
+    </p>
+    <p>
+    The ICR1 register is set to <span data-var="icr1" data-format="0x%x" class="TKNumberField"></span>
+    </p>
+    <p class='explanation'>
+    If the compare output mode (COM) is x, then the value of OCR1A (e.g. <span data-var="ocr1a" data-format="0x%x" class="TKNumberField"></span>) is the value of TCNT after which it sets the OC1A pin to HIGH. If you vary TOP (<span data-var="top" data-format="0x%x" class="TKAdjustableNumber"></span>) you can increase the PWM frequency.
+    </p>
+  </div>
+    <canvas id='timer-vis-plot'>
+    </canvas>
+  </div>
+
+</body>
+</html>
