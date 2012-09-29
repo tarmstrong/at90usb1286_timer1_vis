@@ -24,7 +24,7 @@
       var container = document.getElementById("timer-vis");
       var tangle = new Tangle(container, {
         initialize: function () {
-          this.ocr1a = 0xfffF;
+          this.ocr1a = 0x7F;
           this.top = 0xFF;
           this.cs10 = 0;
           this.cs11 = 1;
@@ -166,8 +166,11 @@
     <p>
     The ICR1 register is set to <span data-var="icr1" data-format="0x%x" class="TKNumberField"></span>
     </p>
-    <p class='explanation'>
-    If the compare output mode (COM) is x, then the value of OCR1A (e.g. <span data-var="ocr1a" data-format="0x%x" class="TKNumberField"></span>) is the value of TCNT after which it sets the OC1A pin to HIGH. If you vary TOP (<span data-var="top" data-format="0x%x" class="TKAdjustableNumber"></span>) you can increase the PWM frequency.
+    <p>
+    The OCR1A register is set to <span data-var="ocr1a" data-format="0x%x" class="TKNumberField"></span>
+    </p>
+    <p>
+    TOP is <span data-var="top" data-format="0x%x" class="TKAdjustableNumber"></span>.
     </p>
   </div>
     <canvas id='timer-vis-plot'>
