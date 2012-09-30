@@ -145,6 +145,20 @@ ol {
   list-style-type: decimal;
 }
 
+dl {
+  margin: 1.333em 0 1.333em 2em;
+  list-style: none;
+}
+
+dl dt {
+  font-weight: bold;
+  display: block;
+  padding: 20px 20px 0px;
+}
+dl dd {
+  padding: 20px 20px 0px;
+}
+
 nav ul li {
   display: inline-block;
   list-style: none;

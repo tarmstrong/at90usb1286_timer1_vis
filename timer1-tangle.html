@@ -110,13 +110,24 @@
 
   <span data-var='asdf' class='TKToggle'></span>
   <h1>A Simple and Interactive Explanation of the Teensy's 16-bit timer (Timer1)</h1>
+  <h2 class='byline'>by Tavish Armstrong</h2>
+  <article>
 
   <p>In the Teensy++, there are three timers. The second of these, Timer 1, is a 16-bit timer. It can be used for periodic interrupts, which lets you run a piece of code every so often. It can also be used for pulse-width modulation (PWM), which is a way to simulate analogue signals using digital signals. You can use this to dim an LED.</p>
   <p>Remember in the first lab, where you turned an LED on by setting the output of a pin to HIGH? HIGH is 5 volts. If you turn it to LOW, that's 0 volts. With digital, there's no in-between. What you can do, however, is simulate a value in between 0 and 5 by changing the value quickly enough so that it appears to be between 0 and 5. The average voltage becomes the apparent voltage.</p>
   <p>As with most things on the Teensy, you configure the behaviour of this Timer by setting various bits in various registers. It's useful to know what these registers are, and what the <code>C</code> constants for them are:
   <dl>
+  <dt>TCNT1</dt><dd>The Timer Counter Something Timer is a register that is automatically increased or decreased. In other words, it is the current value of the timer. Depending on the mode, it may count up until it reaches the special value TOP and then roll over to 0; or it may count up until TOP and then back down to 0.</dd>
+  <dt>OCR1A</dt><dd>The Output Compare Register (Channel A) is the register whose value is compared to the current value of TCNT1. Depending on the wave generation mode and the compare output mode, this may be used as the threshold after which one of the physical output pins is set to HIGH. See COM and WGM.</dd>
   <dt>TCCR1</dt><dd>The Timer Counter/Control Register has two parts: TCCR1A and TCCR1B. Depending on which bits are set on this register, Timer 1 will behave differently. You can set the compare output mode (COM), the wave generation mode (WGM), and select a clock (CS).</dd>
+  <!-- Some of these values are made up, please verify. -->
+  <dt>COM</dt><dd>I mentioned compare output mode. You can use these two bits to determine for what portions of TCNT's cycle the OC1A pin is on. For example, when COM = 3, the OC1A pin is set to HIGH when TCNT1 is greater than OCR1A.</dd>
+  <dt>WGM</dt><dd>Wave Generation Mode. This lets you choose between Non-PWM, PWM, and Fast-PWM modes; what the value of TOP is; and more. This four bit number is made up of two bits in the TCCR1A register and two bits in the TCCR1B register.</dd>
+  <dt>TOP</dt><dd>This is the MAX value of TCNT1. This can be a value between 0 and 0xFFFF because Timer 1 is a 16-bit timer. An 8-bit timer would have a maximum value of TOP equal to 0xFF. Lower values of TOP mean a higher frequency.</dd>
+  <dt>CS</dt><dd>The Clock Select lets you choose a "pre-scaler" for the timer. For example, CS = 2 means that the timer operates at the speed of the CPU; CS = 3 means that the timer operates at FCPU/4; etc. This is another way to vary the frequency of the pulse.</dd>
   </dl>
+
+  <p>Below is a plot of TCNT1 values over time, as a function of the TCCR1 registers and the values of the OCR1A and ICR1 registers. It will only display visualizations for Fast PWM modes.</p>
 
   <div id='timer-vis'>
     <div class='controls'>
@@ -196,6 +207,7 @@
     <pre id='debug'>
     </pre>
   </div>
+  </article>
 
 </body>
 </html>
