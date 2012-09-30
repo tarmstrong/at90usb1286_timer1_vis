@@ -6,7 +6,7 @@ window.timer1_graph = function (ocr1a, top, com, not_implemented) {
   // Set up the Canvas and its dimensions
 
   var canvasEl = document.getElementById('timer-vis-plot');
-  canvasEl.width = 600;
+  canvasEl.width = 400;
   canvasEl.height = 500;
   var ctx = canvasEl.getContext('2d');
   var leftMargin = 100;
@@ -103,22 +103,30 @@ window.timer1_graph = function (ocr1a, top, com, not_implemented) {
   }
   ctx.stroke();
 
+  // Label for OC1A pin output level graph
+
+  var duty = Math.max(((com == 3) ? (ocr1a/top) : (1 - ocr1a/top)) * 5.0, 0);
+  ctx.beginPath();
+  ctx.fillStyle = 'black';
+  ctx.fillText("v = " + sprintf("%.2f V", duty), originX - 90, originY + 55);
+  ctx.stroke();
+
   // Draw lines for HIGH and LOW in the graph of OC1A below the plot
   
   ctx.beginPath();
   ctx.fillStyle = 'red';
   ctx.strokeStyle = 'red';
-  ctx.moveTo(0, originY + 40);
+  ctx.moveTo(originX - 40, originY + 40);
   ctx.lineTo(canvasEl.width - rightMargin, originY + 40);
-  ctx.fillText("HIGH", originX - 80, originY + 40);
+  ctx.fillText("HIGH", originX - 40, originY + 38);
   ctx.stroke();
   
   ctx.beginPath();
   ctx.fillStyle = 'blue';
   ctx.strokeStyle = 'blue';
-  ctx.moveTo(0, originY + 80);
+  ctx.moveTo(originX-40, originY + 80);
   ctx.lineTo(canvasEl.width - rightMargin, originY + 80);
-  ctx.fillText("LOW", originX - 80, originY + 80);
+  ctx.fillText("LOW", originX - 40, originY + 78);
   ctx.stroke();
 
   // Draw a line denoting the TOP value

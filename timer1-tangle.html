@@ -38,8 +38,6 @@
           this.com1a0 = 0;
         },
         update: function () {
-          var not_implemented = false;
-
           // Compare output mode is determined by bits COM1A[1:0]
           this.com = (this.com1a1 << 1) | (this.com1a0 << 0);
 
@@ -49,25 +47,29 @@
           // The WGM mode is determined by bits WGM1[3:0]
           this.wgmmode = (this.wgm13 << 3) | (this.wgm12 << 2) | (this.wgm11 << 1) | (this.wgm10 << 0);
 
+          this.not_implemented = false;
           switch (this.wgmmode) {
           case 5: this.top = 0xFF; break;
           case 6: this.top = 0x1FF; break;
           case 7: this.top = 0x3FF; break;
           case 14: this.top = this.icr1; break;
           case 15: this.top = this.ocr1a; break;
-          default: not_implemented = true; break;
+          default: this.not_implemented = true; break;
+          }
+          if (this.com < 2) {
+            this.not_implemented = true;
           }
 
           var code = document.getElementById('editor').value;
           eval(code);
-          timer1_graph(this.ocr1a, this.top, this.com, not_implemented);
+          timer1_graph(this.ocr1a, this.top, this.com, this.not_implemented);
         }
       });
       window.addEvent('keyup', function () {
           try {
-          var code = document.getElementById('editor').value;
-          eval(code);
-          timer1_graph(tangle.getValue('ocr1a'), tangle.getValue('top'), tangle.getValue('com'), false);
+            var code = document.getElementById('editor').value;
+            eval(code);
+            timer1_graph(tangle.getValue('ocr1a'), tangle.getValue('top'), tangle.getValue('com'), tangle.getValue('not_implemented'));
           }
           catch (e) {
             document.getElementById('debug').innerHTML = e;
@@ -76,6 +78,7 @@
     }
 
 	</script>
+  <link rel='stylesheet' href='default.css' />
   <style>
     table.reg-control td {
       font-size: 8px;
@@ -84,6 +87,9 @@
       text-align: center;
       max-width: 70px;
       width: 70px;
+    }
+    #timer-vis {
+      margin: 50px 0 50px 0;
     }
     #timer-vis .controls {
       float:left;
@@ -95,7 +101,7 @@
     #editor {
       float: left;
       width: 500px;
-      height: 800px;
+      height: 300px;
     }
   </style>
 </head>
@@ -103,7 +109,14 @@
 <body onload="setUpTangle();">
 
   <span data-var='asdf' class='TKToggle'></span>
-	<p>This is a simple reactive document.</p>
+  <h1>A Simple and Interactive Explanation of the Teensy's 16-bit timer (Timer1)</h1>
+
+  <p>In the Teensy++, there are three timers. The second of these, Timer 1, is a 16-bit timer. It can be used for periodic interrupts, which lets you run a piece of code every so often. It can also be used for pulse-width modulation (PWM), which is a way to simulate analogue signals using digital signals. You can use this to dim an LED.</p>
+  <p>Remember in the first lab, where you turned an LED on by setting the output of a pin to HIGH? HIGH is 5 volts. If you turn it to LOW, that's 0 volts. With digital, there's no in-between. What you can do, however, is simulate a value in between 0 and 5 by changing the value quickly enough so that it appears to be between 0 and 5. The average voltage becomes the apparent voltage.</p>
+  <p>As with most things on the Teensy, you configure the behaviour of this Timer by setting various bits in various registers. It's useful to know what these registers are, and what the <code>C</code> constants for them are:
+  <dl>
+  <dt>TCCR1</dt><dd>The Timer Counter/Control Register has two parts: TCCR1A and TCCR1B. Depending on which bits are set on this register, Timer 1 will behave differently. You can set the compare output mode (COM), the wave generation mode (WGM), and select a clock (CS).</dd>
+  </dl>
 
   <div id='timer-vis'>
     <div class='controls'>
