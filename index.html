@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>
+A Simple and Interactive Explanation of the Teensy's 16-bit timer (Timer1)
+</title>
+
+<!-- Tangle -->
+<script type="text/javascript" src="Tangle.js"></script>
+
+<!-- TangleKit (optional) -->
+<link rel="stylesheet" href="TangleKit/TangleKit.css" type="text/css">
+<script type="text/javascript" src="TangleKit/mootools.js"></script>
+<script type="text/javascript" src="TangleKit/sprintf.js"></script>
+<script type="text/javascript" src="TangleKit/BVTouchable.js"></script>
+<script type="text/javascript" src="TangleKit/TangleKit.js"></script>
+
+<script type="text/javascript" src="graph.js"></script>
+
+<!-- example -->
+<script type="text/javascript">
+
+function generateCode(t) {
+  var out = [];
+  var tccr1a = [];
+  var tccr1b = [];
+  out.push("<pre class='sourceCode C'><code class='sourceCode C'>");
+  if (t.com1a1) {
+    tccr1a.push("(1 << COM1A1)");
+  }
+  if (t.com1a0) {
+    tccr1a.push("(1 << COM1A0)");
+  }
+  if (t.wgm11) {
+    tccr1a.push("(1 << WGM11)");
+  }
+  if (t.wgm10) {
+    tccr1a.push("(1 << WGM10)");
+  }
+  out.push("TCCR1A |= " + tccr1a.join(" | ") + ";");
+  if (t.wgm13) {
+    tccr1b.push("(1 << WGM13)");
+  }
+  if (t.wgm12) {
+    tccr1b.push("(1 << WGM12)");
+  }
+  if (t.cs12) {
+    tccr1b.push("(1 << CS12)");
+  }
+  if (t.cs11) {
+    tccr1b.push("(1 << CS11)");
+  }
+  if (t.cs10) {
+    tccr1b.push("(1 << CS10)");
+  }
+  out.push("TCCR1B |= " + tccr1b.join(" | ") + ";");
+  out.push("OCR1A = " + t.ocr1a + ";");
+  out.push("ICR1 = " + t.icr1 + ";");
+  out.push("</code></pre>");
+  return out.join("\n");
+}
+
+function setUpTangle () {
+
+  var container = document.getElementById("timer-vis");
+  var tangle = new Tangle(container, {
+    initialize: function () {
+      this.ocr1a = 0x7F;
+      this.top = 0xFF;
+      this.cs10 = 0;
+      this.cs11 = 1;
+      this.cs12 = 0;
+      this.wgm13 = 0;
+      this.wgm12 = 1;
+      this.wgm11 = 0;
+      this.wgm10 = 1;
+      this.icr1 = 100;
+      this.com1a1 = 1;
+      this.com1a0 = 1;
+    },
+    update: function () {
+      // Compare output mode is determined by bits COM1A[1:0]
+      this.com = (this.com1a1 << 1) | (this.com1a0 << 0);
+
+      // The clock select is determined by bits CS[2:0]
+      this.csmode = (this.cs12 << 2) | (this.cs11 << 1) | (this.cs10 << 0);
+
+      // The WGM mode is determined by bits WGM1[3:0]
+      this.wgmmode = (this.wgm13 << 3) | (this.wgm12 << 2) | (this.wgm11 << 1) | (this.wgm10 << 0);
+
+      this.not_implemented = false;
+      switch (this.wgmmode) {
+      case 5: this.top = 0xFF; break;
+      case 6: this.top = 0x1FF; break;
+      case 7: this.top = 0x3FF; break;
+      case 14: this.top = this.icr1; break;
+      case 15: this.top = this.ocr1a; break;
+      default: this.not_implemented = true; break;
+      }
+      if (this.com < 1) {
+        this.not_implemented = true;
+      }
+
+      timer1_graph(this.ocr1a, this.top, this.com, this.not_implemented);
+      document.getElementById('code-generate').innerHTML = generateCode(this);
+    }
+  });
+}
+
+</script>
+<link rel='stylesheet' href='default.css' /> <link rel='stylesheet' href='syntax.css' />
+<style>
+  table.reg-control td {
+    font-size: 8px;
+    padding: 0px 0px 0px 0px;
+    margin: 0 0 0 0 ;
+    text-align: center;
+    max-width: 70px;
+    width: 70px;
+  }
+  #timer-vis {
+    margin: 50px 0 50px 0;
+  }
+  #timer-vis .controls {
+    float:left;
+    width: 500px;
+  }
+  #timer-vis-plot {
+    margin-left: 40px;
+  }
+  #editor {
+    float: left;
+    width: 500px;
+    height: 300px;
+  }
+  #code-generate {
+    font-size: 10px;
+  }
+</style>
+</head>
+
+<body onload="setUpTangle();">
+
+<span data-var='asdf' class='TKToggle'></span>
+<h1>
+A Simple and Interactive Explanation of the Teensy's 16-bit timer (Timer1)
+</h1>
+  <h2 class='byline'>
+by Tavish Armstrong
+</h2>
+  
+<article>
+<p>
+This page is a work in progress and needs some editing and bug fixes. Check my main site if this URL disappears. One thing to note is that I haven't done anything with the Clock Select in the diagram (yet).
+</p>
+  <h3>
+Preface
+</h3>
+  <p>
+When taking <em>SOEN 422: Embedded Systems </em> at Concordia in the Fall of 2012, I was frustrated by the lack of good documentation on the Teensy's hardware timers. All we had to do was recreate the Arduino <code>analogWrite()</code> function in straight <code>C</code> code, but that's a tricky thing to do. The hardware timers are built to do many things and you need to thoroughly understand what they do (but not how they do it) in order to use them. Usually you need only find the right modes and how to enable them. The best way to do this is to read the manual for the chip. This will tell you in excruciating detail what each register does, what the various modes do, etc. It contains timing graphs that show precisely how the timer interacts with its registers. However, that's 10 really, really detailed pages that you might misunderstand anyways.
+</p>
+  <p>
+This is my attempt at a more beginner-friendly explanation of the Teensy's Timer 1 and what it does.
+</p>
+
+
+<h3>
+The explanation
+</h3>
+
+
+<p>
+In the Teensy++, there are three timers. The second of these, Timer 1, is a 16-bit timer. It can be used for periodic interrupts, which lets you run a piece of code every so often. It can also be used for pulse-width modulation (PWM), which is a way to simulate analogue signals using digital signals. You can use this to dim an LED.
+</p>
+  <p>
+Remember in the first lab, where you turned an LED on by setting the output of a pin to HIGH? HIGH is 5 volts. If you turn it to LOW, that's 0 volts. With digital, there's no in-between. What you can do, however, is simulate a value in between 0 and 5 by changing the value quickly enough so that it appears to be between 0 and 5. The average voltage becomes the apparent voltage.
+</p>
+  <p>
+As with most things on the Teensy, you configure the behaviour of this Timer by setting various bits in various registers. It's useful to know what these registers are, and what the <code>C</code> constants for them are:
+<dl>
+  <dt>
+TCNT1
+</dt><dd>
+The Timer Counter Something Timer is a register that is automatically increased or decreased. In other words, it is the current value of the timer. Depending on the mode, it may count up until it reaches the special value TOP and then roll over to 0; or it may count up until TOP and then back down to 0.
+</dd>
+  <dt>
+OCR1A
+</dt><dd>
+The Output Compare Register (Channel A) is the register whose value is compared to the current value of TCNT1. Depending on the wave generation mode and the compare output mode, this may be used as the threshold after which one of the physical output pins is set to HIGH. See COM and WGM.
+</dd>
+  <dt>
+TCCR1
+</dt><dd>
+<p>The Timer Counter/Control Register has two parts: TCCR1A and TCCR1B. Depending on which bits are set on this register, Timer 1 will behave differently. You can set the compare output mode (COM), the wave generation mode (WGM), and select a clock (CS).</p>
+<pre class="sourceCode C"><code class="sourceCode c"><span class="co">// Here&#39;s some sample code showing how to set various bits on the TCCR1 registers.</span>
+TCCR1A |= (<span class="dv">1</span> &lt;&lt; COM1A1) | (<span class="dv">1</span> &lt;&lt; COM1A0); <span class="co">// Set COM to 3</span>
+TCCR1A |= (<span class="dv">1</span> &lt;&lt; WGM11) | (<span class="dv">0</span> &lt;&lt; WGM10); <span class="co">// Set lower two bits of WGM to 2.</span>
+TCCR1B |= (<span class="dv">1</span> &lt;&lt; WGM13) | (<span class="dv">1</span> &lt;&lt; WGM12); <span class="co">// Set higher two bits of WGM to 8 + 4. Total WGM = 14.</span>
+TCCR1B |=  (<span class="dv">0</span> &lt;&lt; CS12) | (<span class="dv">1</span> &lt;&lt; CS11) | (<span class="dv">0</span> &lt;&lt; CS10); <span class="co">// CS = 2.</span></code></pre>
+
+</dd>
+  <!-- Some of these values are made up, please verify. -->
+  <dt>
+COM
+</dt><dd>
+I mentioned compare output mode. You can use these two bits to determine for what portions of TCNT's cycle the OC1A pin is on. For example, when COM = 3, the OC1A pin is set to HIGH when TCNT1 is greater than OCR1A.
+</dd>
+  <dt>
+WGM
+</dt><dd>
+Wave Generation Mode. This lets you choose between Non-PWM, PWM, and Fast-PWM modes; what the value of TOP is; and more. This four bit number is made up of two bits in the TCCR1A register and two bits in the TCCR1B register.
+</dd>
+  <dt>
+TOP
+</dt><dd>
+This is the MAX value of TCNT1. This can be a value between 0 and 0xFFFF because Timer 1 is a 16-bit timer. An 8-bit timer would have a maximum value of TOP equal to 0xFF. Lower values of TOP mean a higher frequency.
+</dd>
+  <dt>
+CS
+</dt><dd>
+The Clock Select lets you choose a &quot;pre-scaler&quot; for the timer. For example, CS = 2 means that the timer operates at the speed of the CPU; CS = 3 means that the timer operates at FCPU/4; etc. This is another way to vary the frequency of the pulse.
+</dd>
+  </dl>
+
+
+<p>
+Below is a plot of TCNT1 values over time, as a function of the TCCR1 registers and the values of the OCR1A and ICR1 registers. It will only display visualizations for Fast PWM modes. You can toggle the values of various bits in the registers to see what they affect in the graph. The diagram will also generate code for you.
+</p>
+
+
+<div id='timer-vis'>
+    <div class='controls'>
+    <p>
+    <table class='reg-control'>
+      <thead>
+        <td></td>
+        <td>
+COM1A1
+</td>
+        <td>
+COM1A0
+</td>
+        <td>
+COM1B1
+</td>
+        <td>
+COM1B0
+</td>
+        <td>
+COM1C1
+</td>
+        <td>
+COM1C0
+</td>
+        <td>
+WGM11
+</td>
+        <td>
+WGM10
+</td>
+      </thead>
+      <tr>
+        <td>
+TCCR1A
+</td>
+        <td>
+<span data-var='com1a1' class='TKToggle'></span>
+</td>
+        <td>
+<span data-var='com1a0' class='TKToggle'></span>
+</td>
+        <td>
+<input type='checkbox' name='com1b1' disabled />
+</td>
+        <td>
+<input type='checkbox' name='com1b0' disabled />
+</td>
+        <td>
+<input type='checkbox' name='com1c1' disabled />
+</td>
+        <td>
+<input type='checkbox' name='com1c0' disabled />
+</td>
+        <td>
+<span data-var='wgm11' class='TKToggle'></span>
+</td>
+        <td>
+<span data-var='wgm10' class='TKToggle'></span>
+</td>
+      </tr>
+    </table>
+    <table class='reg-control'>
+      <thead>
+        <td></td>
+        <td>
+ICNC1
+</td>
+        <td>
+ICES1
+</td>
+        <td>
+-
+</td>
+        <td>
+WGM13
+</td>
+        <td>
+WGM12
+</td>
+        <td>
+CS12
+</td>
+        <td>
+CS11
+</td>
+        <td>
+CS10
+</td>
+      </thead>
+      <tr>
+        <td>
+TCCR1B
+</td>
+        <td>
+<input type='checkbox' name='icnc1' disabled />
+</td>
+        <td>
+<input type='checkbox' name='ices1' disabled />
+</td>
+        <td>
+<input type='checkbox' name='none' disabled />
+</td>
+        <td>
+<span data-var='wgm13' class='TKToggle'></span>
+</td>
+        <td>
+<span data-var='wgm12' class='TKToggle'></span>
+</td>
+        <td>
+<span data-var='cs12' class='TKToggle'></span>
+</td>
+        <td>
+<span data-var='cs11' class='TKToggle'></span>
+</td>
+        <td>
+<span data-var='cs10' class='TKToggle'></span>
+</td>
+      </tr>
+    </table>
+    </p>
+    <p>
+    
+The clock select is set to <span data-var='csmode'></span>.
+</p>
+    <p>
+    
+The wave generation mode is set to <span data-var='wgmmode'></span>.
+</p>
+    <p>
+    
+The ICR1 register is set to <span data-var="icr1" data-format="0x%x" class="TKNumberField"></span>
+</p>
+    <p>
+    
+The OCR1A register is set to <span data-var="ocr1a" data-format="0x%x" class="TKNumberField"></span>
+</p>
+    <p>
+    
+TOP is <span data-var="top" data-format="0x%x" class="TKAdjustableNumber"></span>.
+</p>
+    <div id='code-generate'>
+    </div>
+  </div>
+    
+<canvas id='timer-vis-plot'> </canvas>
+</div>
+  
+</article>
+</body>
+</html>
+
+
