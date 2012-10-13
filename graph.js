@@ -19,7 +19,7 @@ function TimerGraph(canvasEl, wgm, cs, com, ocra, icr) {
   case 15: this.top = this.ocr1a; break;
   default: this.not_implemented = true; break;
   }
-  if (this.com <= 1) {
+  if ([0,2,3].indexOf(this.com) === -1) {
     this.not_implemented = true;
   }
 
@@ -108,7 +108,10 @@ TimerGraph.prototype.TCNT_at = function (x, top) {
 
 TimerGraph.prototype.isOn = function (tcnt) {
   var com3 = this.com === 3;
-  if (this.ocr1a > this.top) {
+  if (this.com === 0) {
+    return false;
+  }
+  else if (this.ocr1a > this.top) {
     return com3;
   }
   else if (tcnt > this.ocr1a) {
