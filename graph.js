@@ -1,153 +1,207 @@
 /**
  * Code to draw a visualization of Timer1's fast PWM mode.
  */
-(function () {
-window.timer1_graph = function (ocr1a, top, com, not_implemented) {
-  // Set up the Canvas and its dimensions
-
-  var canvasEl = document.getElementById('timer-vis-plot');
-  canvasEl.width = 400;
-  canvasEl.height = 500;
-  var ctx = canvasEl.getContext('2d');
-  var leftMargin = 100;
-  var bottomMargin = 200;
-  var topMargin = 0;
-  var rightMargin = 0;
-  var originX = leftMargin;
-  var originY = canvasEl.height - bottomMargin;
-
-  if (not_implemented) {
-    ctx.fillStyle = "#DDDDDD";
-    ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
-    ctx.fillStyle = "black";
-    ctx.fillText("Sorry, I haven't made a visualization for that mode yet", canvasEl.width / 2.0 - 120, canvasEl.height / 2.0);
-    return;
+function TimerGraph(canvasEl, wgm, cs, com, ocra, icr) {
+  this.canvasEl = canvasEl;
+  this.ocr1a = ocra;
+  this.wgm = wgm;
+  this.icr1 = icr;
+  this.com = com;
+  this.not_implemented = false;
+  switch (this.wgm) {
+  case 1: this.top = 0xFF; break;
+  case 2: this.top = 0x1FF; break;
+  case 3: this.top = 0x3FF; break;
+  case 5: this.top = 0xFF; break;
+  case 6: this.top = 0x1FF; break;
+  case 7: this.top = 0x3FF; break;
+  case 14: this.top = this.icr1; break;
+  case 15: this.top = this.ocr1a; break;
+  default: this.not_implemented = true; break;
+  }
+  if (this.com <= 1) {
+    this.not_implemented = true;
   }
 
-  // Draw axes
+  this.width = 400;
+  this.height = 400;
+  this.leftMargin = 100;
+  this.bottomMargin = 200;
+  this.topMargin = 0;
+  this.rightMargin = 0;
+  this.originX = this.leftMargin;
+  this.originY = this.canvasEl.height - this.bottomMargin;
+}
+TimerGraph.prototype.isImplemented = function () {
+  return !this.not_implemented;
+};
+TimerGraph.prototype.resetCanvas = function () {
+  this.canvasEl.width = this.width;
+  this.canvasEl.height = this.height;
+  this.ctx = this.canvasEl.getContext('2d');
+};
+TimerGraph.prototype.drawAxes = function () {
+  this.ctx.beginPath();
+  this.ctx.fillStyle = "#FFFFFF";
+  this.ctx.fillRect(0, 0, this.canvasEl.width, this.canvasEl.height);
+  this.ctx.strokeStyle = 'black';
+  this.ctx.fillStyle = "black";
+  this.ctx.moveTo(this.leftMargin, this.originY);
+  this.ctx.lineTo(this.leftMargin, this.topMargin);
+  this.ctx.moveTo(this.leftMargin, this.originY);
+  this.ctx.lineTo(this.canvasEl.width-this.rightMargin, this.originY);
+  this.ctx.fillText("TCNT1", this.leftMargin - 40, this.topMargin + 20);
+  this.ctx.fillText("Time (in clock cycles)", this.originX + (this.canvasEl.width - this.leftMargin - this.rightMargin)/2, this.canvasEl.height - this.bottomMargin+15);
+  this.ctx.stroke();
+};
 
-  ctx.fillStyle = "#FFFFFF";
-  ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = "black";
-  ctx.moveTo(leftMargin, originY);
-  ctx.lineTo(leftMargin, topMargin);
-  ctx.moveTo(leftMargin, originY);
-  ctx.lineTo(canvasEl.width-rightMargin, originY);
-  ctx.fillText("TCNT1", leftMargin - 40, topMargin + 20);
-  ctx.fillText("Time (in clock cycles)", originX + (canvasEl.width - leftMargin - rightMargin)/2, canvasEl.height - bottomMargin+15);
-  ctx.stroke();
+TimerGraph.prototype.drawLabeledLine = function (label, color, fromX, posY, toX) {
+  var xoffset = 10, yoffset = -10, x;
+  this.ctx.beginPath();
+  this.ctx.fillStyle = color;
+  this.ctx.strokeStyle = color;
 
-  // Timer settings
+  // dashed line.
+  for (x = fromX; x < toX; x += 10) {
+    this.ctx.moveTo(x, posY);
+    this.ctx.lineTo(x + 7, posY);
+  }
+  this.ctx.fillText(label, fromX + xoffset, posY + yoffset);
+  this.ctx.stroke();
+};
 
-  //  var top = 0xFF; // TOP as defined in the manual
-  //  var ocr1a = 0x7F; // Output Compare Register
+TimerGraph.prototype.drawSpecialLines = function () {
+  this.drawLabeledLine("OCR1A (" + this.ocr1a +")", 'green', 0, this.originY - this.scale(this.ocr1a), this.canvasEl.width - this.rightMargin);
+  this.drawLabeledLine("TOP (" + this.top + ")", 'blue', 0, this.originY - this.scale(this.top), this.canvasEl.width - this.rightMargin);
 
-  // How wide is the smallest interval we draw on the graph?
-  var dx = 1;
+  this.drawLabeledLine("HIGH", 'red', this.originX - 40, this.originY + 40, this.canvasEl.width - this.rightMargin);
+  this.drawLabeledLine("LOW", 'blue', this.originX - 40, this.originY + 80, this.canvasEl.width - this.rightMargin);
+};
 
-  // TCNT is the Timer Control/Counter Register
-  var TCNT_at = function (x, top) { return x % top; };
+TimerGraph.prototype.scale = function (v) {
+  var max, scale;
+  max = this.top;
+  scale = 3*max/255.0;
+  return v/scale;
+};
 
-  var x = 0;
-  var highlow = 0;
-  var scaler = (top+200)/(canvasEl.height - rightMargin - leftMargin);
-  //  var scaleHeight = function (h) { return (h/scaler); };
+TimerGraph.prototype.iscale = function (v) {
+  return v/this.scale(1);
+};
 
-  var draw_on = function () {
-    ctx.fillStyle = '#AAAAAA'; // Colour of the HIGH portion of the graph
-
-    // Draw the voltage below the graph
-
-    ctx.moveTo(originX + x, originY + 40);
-    ctx.lineTo(originX + x +dx, originY + 40);
-
-    // Draw a vertical line if we're changing voltage
-
-    if (highlow != 1) {
-      ctx.moveTo(originX + x, originY + 80);
-      ctx.lineTo(originX + x, originY + 40);
+TimerGraph.prototype.TCNT_at = function (x, top) {
+    if ([5, 6, 7, 14, 15].indexOf(this.wgm) !== -1) {
+      return x % top;
     }
-    highlow = 1;
-  };
-  var draw_off = function () {
-    ctx.fillStyle = '#888888'; // Colour of the LOW portion of the graph
-
-    // Draw the voltage below the graph
-
-    ctx.moveTo(originX + x, originY + 80);
-    ctx.lineTo(originX + x +dx, originY + 80);
-
-    // Draw a vertical line if we're changing voltage
-
-    if (highlow != 0) {
-      ctx.moveTo(originX + x, originY + 40);
-      ctx.lineTo(originX + x, originY + 80);
-    }
-    highlow = 0;
-  };
-
-  for (x = 0; x < canvasEl.width-rightMargin-28-dx; x += dx) {
-    var h = TCNT_at(x, top);
-    ctx.strokeStyle = 'black';
-    if (h > ocr1a) {
-      if (com == 3) { draw_on(); } else { draw_off(); }
+    else if ([1, 2, 3].indexOf(this.wgm) !== -1) {
+      var v = x % (2*top);
+      if (v > top) {
+        return 2*top - v;
+      }
+      else {
+        return v;
+      }
     }
     else {
-      if (com == 3) { draw_off(); } else { draw_on(); }
     }
-
-    // Plot the value on the graph
-    ctx.fillRect(originX + x, originY, dx, -h);
-    ctx.stroke();
-  }
-  ctx.stroke();
-
-  // Label for OC1A pin output level graph
-
-  var duty = Math.max(((com == 3) ? (ocr1a/top) : (1 - ocr1a/top)) * 5.0, 0);
-  ctx.beginPath();
-  ctx.fillStyle = 'black';
-  ctx.fillText("v = " + sprintf("%.2f V", duty), originX - 90, originY + 55);
-  ctx.stroke();
-
-  // Draw lines for HIGH and LOW in the graph of OC1A below the plot
-  
-  ctx.beginPath();
-  ctx.fillStyle = 'red';
-  ctx.strokeStyle = 'red';
-  ctx.moveTo(originX - 40, originY + 40);
-  ctx.lineTo(canvasEl.width - rightMargin, originY + 40);
-  ctx.fillText("HIGH", originX - 40, originY + 38);
-  ctx.stroke();
-  
-  ctx.beginPath();
-  ctx.fillStyle = 'blue';
-  ctx.strokeStyle = 'blue';
-  ctx.moveTo(originX-40, originY + 80);
-  ctx.lineTo(canvasEl.width - rightMargin, originY + 80);
-  ctx.fillText("LOW", originX - 40, originY + 78);
-  ctx.stroke();
-
-  // Draw a line denoting the TOP value
-
-  ctx.beginPath();
-  ctx.font = "bold 12px sans-serif";
-  ctx.fillStyle = 'blue';
-  ctx.strokeStyle = 'blue';
-  ctx.moveTo(0, originY - top);
-  ctx.lineTo(canvasEl.width - rightMargin, originY - top);
-  ctx.fillText("TOP (" + top + ")", originX - 60, originY - top - 5);
-  ctx.stroke();
-
-  // Draw a line denoting the OCR1A value
-
-  ctx.beginPath();
-  ctx.fillStyle = 'green';
-  ctx.strokeStyle = 'green';
-  ctx.moveTo(0, originY - ocr1a);
-  ctx.lineTo(canvasEl.width - rightMargin, originY - ocr1a);
-  ctx.fillText("OCR1A (" + ocr1a + ")", originX - 80, originY - ocr1a - 5);
-  ctx.stroke();
 };
-}());
+
+TimerGraph.prototype.isOn = function (tcnt) {
+  var com3 = this.com === 3;
+  if (this.ocr1a > this.top) {
+    return com3;
+  }
+  else if (tcnt > this.ocr1a) {
+    return !com3;
+  }
+  else {
+    return com3;
+  }
+};
+
+TimerGraph.prototype.barColor = function (tcnt) {
+  var offColor, compAColor;
+  offColor = '#AAAAAA';
+  compAColor = '#888888';
+  if (this.isOn(tcnt)) {
+    return compAColor;
+  }
+  else {
+    return offColor;
+  }
+};
+
+TimerGraph.prototype.drawGraph = function () {
+  var x, plotWidth, dx, tcnt, barHeight, barColor, lastScaledX;
+  dx = 1;
+  plotWidth = this.canvasEl.width-this.rightMargin-28;
+  for (x = 0; x < plotWidth; x += 1) {
+    var ix = this.iscale(x);
+    tcnt = this.TCNT_at(ix, this.top);
+    barHeight = this.scale(tcnt);
+    barColor = this.barColor(tcnt);
+    this.ctx.strokeStyle = barColor;
+    this.ctx.fillStyle = barColor;
+    this.ctx.fillRect(this.originX + x, this.originY, dx, -barHeight);
+    this.ctx.stroke();
+  }
+
+  var duty = Math.max(((this.com == 3) ? (this.ocr1a/this.top) : (1 - this.ocr1a/this.top)) * 5.0, 0);
+  this.ctx.beginPath();
+  this.ctx.fillStyle = 'black';
+  this.ctx.fillText("v = " + sprintf("%.2f V", duty), this.originX - 90, this.originY + 55);
+  this.ctx.stroke();
+};
+
+// Draw the voltage output graph.
+TimerGraph.prototype.drawOutput = function () {
+  var lastOnVal, on, x, y, plotWidth, dx, tcnt, highY, lowY;
+  dx = 1;
+  highY = this.originY + 40;
+  lowY = this.originY + 80;
+  plotWidth = this.canvasEl.width-this.rightMargin-28;
+  this.ctx.beginPath();
+  this.ctx.strokeStyle = "black";
+  this.ctx.fillStyle = "black";
+  lastOnVal = this.isOn(0);
+  for (x = 0; x < plotWidth; x += 1) {
+    var ix = this.iscale(x);
+    tcnt = this.TCNT_at(ix, this.top);
+    on = this.isOn(tcnt);
+    if (on !== lastOnVal) {
+      // Voltage change needs a vertical line.
+      this.ctx.moveTo(this.originX + x, lowY);
+      this.ctx.lineTo(this.originX + x, highY);
+    }
+    else {
+      if (on) {
+        y = highY;
+      }
+      else {
+        y = lowY;
+      }
+      this.ctx.moveTo(this.originX + x, y);
+      this.ctx.lineTo(this.originX + x + dx, y);
+    }
+    lastOnVal = on;
+  }
+  this.ctx.stroke();
+};
+
+TimerGraph.prototype.plot = function () {
+  this.resetCanvas();
+  if (!this.isImplemented()) {
+    this.ctx.fillStyle = "#DDDDDD";
+    this.ctx.fillRect(0, 0, this.canvasEl.width, this.canvasEl.height);
+    this.ctx.fillStyle = "black";
+    this.ctx.fillText("Sorry, I haven't made a visualization for that mode yet", this.canvasEl.width / 2.0 - 120, this.canvasEl.height / 2.0);
+    return;
+  }
+  else {
+    this.drawAxes();
+//    this.drawScaleTicks();
+    this.drawGraph();
+    this.drawSpecialLines(); // OCR, TOP
+    this.drawOutput();
+  }
+};

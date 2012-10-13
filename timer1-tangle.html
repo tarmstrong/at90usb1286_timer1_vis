@@ -76,6 +76,7 @@ function setUpTangle () {
       this.icr1 = 100;
       this.com1a1 = 1;
       this.com1a0 = 1;
+      this.update();
     },
     update: function () {
       // Compare output mode is determined by bits COM1A[1:0]
@@ -100,9 +101,30 @@ function setUpTangle () {
         this.not_implemented = true;
       }
 
-      timer1_graph(this.ocr1a, this.top, this.com, this.not_implemented);
+      var code = document.getElementById('editor').value;
+      eval(code);
+      var canvasEl = document.getElementById('timer-vis-plot');
+      try {
+        var timer = new TimerGraph(canvasEl, this.wgmmode, this.csmode, this.com, this.ocr1a, this.icr1);
+        timer.plot();
+      }
+      catch (e) {
+        document.getElementById('debug').innerHTML = e;
+      }
+//      timer1_graph(canvasEl, this.ocr1a, this.top, this.com, this.not_implemented);
       document.getElementById('code-generate').innerHTML = generateCode(this);
     }
+  });
+  window.addEvent('keyup', function () {
+      try {
+        var code = document.getElementById('editor').value;
+        eval(code);
+        var timer = new TimerGraph(document.getElementById('timer-vis-plot'), tangle.getValue('wgmmode'), tangle.getValue('csmode'), tangle.getValue('com'), tangle.getValue('ocr1a'), tangle.getValue('icr1'));
+        timer.plot();
+      }
+      catch (e) {
+        document.getElementById('debug').innerHTML = e;
+      }
   });
 }
 
@@ -251,6 +273,13 @@ TCCR1B |=  (0 << CS12) | (1 << CS11) | (0 << CS10); // CS = 2.
   </div>
     <canvas id='timer-vis-plot'>
     </canvas>
+  </div>
+
+  <div>
+    <textarea id='editor'>
+    </textarea>
+    <pre id='debug'>
+    </pre>
   </div>
   </article>
 
