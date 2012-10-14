@@ -1,11 +1,13 @@
 /**
  * Code to draw a visualization of Timer1's fast PWM mode.
  */
+(function () {
 function TimerGraph(canvasEl, wgm, cs, com, ocra, icr) {
   this.canvasEl = canvasEl;
   this.ocr1a = ocra;
   this.wgm = wgm;
   this.icr1 = icr;
+  this.cs = cs;
   this.com = com;
   this.not_implemented = false;
   switch (this.wgm) {
@@ -22,6 +24,9 @@ function TimerGraph(canvasEl, wgm, cs, com, ocra, icr) {
   if ([0,2,3].indexOf(this.com) === -1) {
     this.not_implemented = true;
   }
+  if (typeof this.getPrescaler() === 'undefined') {
+    this.not_implemented = true;
+  }
 
   this.width = 400;
   this.height = 400;
@@ -31,6 +36,8 @@ function TimerGraph(canvasEl, wgm, cs, com, ocra, icr) {
   this.rightMargin = 0;
   this.originX = this.leftMargin;
   this.originY = this.canvasEl.height - this.bottomMargin;
+
+  this.procFreq = 16000000.0;
 }
 TimerGraph.prototype.isImplemented = function () {
   return !this.not_implemented;
@@ -51,7 +58,7 @@ TimerGraph.prototype.drawAxes = function () {
   this.ctx.moveTo(this.leftMargin, this.originY);
   this.ctx.lineTo(this.canvasEl.width-this.rightMargin, this.originY);
   this.ctx.fillText("TCNT1", this.leftMargin - 40, this.topMargin + 20);
-  this.ctx.fillText("Time (in clock cycles)", this.originX + (this.canvasEl.width - this.leftMargin - this.rightMargin)/2, this.canvasEl.height - this.bottomMargin+15);
+//  this.ctx.fillText("Time (in clock cycles)", this.originX + (this.canvasEl.width - this.leftMargin - this.rightMargin)/2, this.canvasEl.height - this.bottomMargin+15);
   this.ctx.stroke();
 };
 
@@ -149,7 +156,7 @@ TimerGraph.prototype.drawGraph = function () {
     this.ctx.stroke();
   }
 
-  var duty = Math.max(((this.com == 3) ? (this.ocr1a/this.top) : (1 - this.ocr1a/this.top)) * 5.0, 0);
+  var duty = Math.min(5, Math.max(((this.com == 3) ? (this.ocr1a/this.top) : (1 - this.ocr1a/this.top)) * 5.0, 0));
   this.ctx.beginPath();
   this.ctx.fillStyle = 'black';
   this.ctx.fillText("v = " + sprintf("%.2f V", duty), this.originX - 90, this.originY + 55);
@@ -191,6 +198,43 @@ TimerGraph.prototype.drawOutput = function () {
   this.ctx.stroke();
 };
 
+TimerGraph.prototype.getPrescaler = function () {
+  return {
+    1: 1,
+    2: 8,
+    3: 64,
+    4: 256,
+    5: 1024,
+  }[this.cs];
+};
+
+TimerGraph.prototype.calculateFrequency = function () {
+  if ([5, 6, 7, 14, 15].indexOf(this.wgm) !== -1) {
+    return this.procFreq / (this.getPrescaler() * (1 + this.top));
+  }
+  else {
+    return this.procFreq / (2 * this.getPrescaler() * (1 + this.top));
+  }
+};
+
+TimerGraph.prototype.drawScaleTicks = function () {
+  var freq = this.calculateFrequency();
+  var xoffset;
+  if ([5, 6, 7, 14, 15].indexOf(this.wgm) !== -1) {
+    xoffset = this.scale(this.top);
+  }
+  else {
+    xoffset = this.scale(this.top*2);
+  }
+  this.ctx.beginPath();
+  this.ctx.fillStyle = 'black';
+  this.ctx.strokeStyle = 'black';
+  this.ctx.moveTo(this.originX + xoffset, this.originY);
+  this.ctx.lineTo(this.originX + xoffset, this.originY + 7);
+  this.ctx.fillText(sprintf("F = %.2f Hz", freq), this.originX + xoffset, this.originY + 20);
+  this.ctx.stroke();
+};
+
 TimerGraph.prototype.plot = function () {
   this.resetCanvas();
   if (!this.isImplemented()) {
@@ -202,9 +246,11 @@ TimerGraph.prototype.plot = function () {
   }
   else {
     this.drawAxes();
-//    this.drawScaleTicks();
+    this.drawScaleTicks();
     this.drawGraph();
     this.drawSpecialLines(); // OCR, TOP
     this.drawOutput();
   }
 };
+window.TimerGraph = TimerGraph;
+}());

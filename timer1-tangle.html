@@ -64,6 +64,7 @@ function setUpTangle () {
   var container = document.getElementById("timer-vis");
   var tangle = new Tangle(container, {
     initialize: function () {
+      this.show_icr = false;
       this.ocr1a = 0x7F;
       this.top = 0xFF;
       this.cs10 = 0;
@@ -78,7 +79,7 @@ function setUpTangle () {
       this.com1a0 = 1;
       this.update();
     },
-    update: function () {
+    update: function (element, value) {
       // Compare output mode is determined by bits COM1A[1:0]
       this.com = (this.com1a1 << 1) | (this.com1a0 << 0);
 
@@ -88,18 +89,7 @@ function setUpTangle () {
       // The WGM mode is determined by bits WGM1[3:0]
       this.wgmmode = (this.wgm13 << 3) | (this.wgm12 << 2) | (this.wgm11 << 1) | (this.wgm10 << 0);
 
-      this.not_implemented = false;
-      switch (this.wgmmode) {
-      case 5: this.top = 0xFF; break;
-      case 6: this.top = 0x1FF; break;
-      case 7: this.top = 0x3FF; break;
-      case 14: this.top = this.icr1; break;
-      case 15: this.top = this.ocr1a; break;
-      default: this.not_implemented = true; break;
-      }
-      if (this.com < 1) {
-        this.not_implemented = true;
-      }
+      this.show_icr = [8, 10, 12, 14].indexOf(this.wgmmode) !== -1;
 
       var code = document.getElementById('editor').value;
       eval(code);
@@ -119,8 +109,9 @@ function setUpTangle () {
       try {
         var code = document.getElementById('editor').value;
         eval(code);
-        var timer = new TimerGraph(document.getElementById('timer-vis-plot'), tangle.getValue('wgmmode'), tangle.getValue('csmode'), tangle.getValue('com'), tangle.getValue('ocr1a'), tangle.getValue('icr1'));
-        timer.plot();
+        tangle.setValue('icr1', tangle.getValue('icr1'));
+//        var timer = new TimerGraph(document.getElementById('timer-vis-plot'), tangle.getValue('wgmmode'), tangle.getValue('csmode'), tangle.getValue('com'), tangle.getValue('ocr1a'), tangle.getValue('icr1'));
+//        timer.plot();
       }
       catch (e) {
         document.getElementById('debug').innerHTML = e;
@@ -253,21 +244,24 @@ TCCR1B |=  (0 << CS12) | (1 << CS11) | (0 << CS10); // CS = 2.
       </tr>
     </table>
     </p>
-    <p>
-    The clock select is set to <span data-var='csmode'></span>.
-    </p>
-    <p>
-    The wave generation mode is set to <span data-var='wgmmode'></span>.
-    </p>
-    <p>
-    The ICR1 register is set to <span data-var="icr1" data-format="0x%x" class="TKNumberField"></span>
-    </p>
-    <p>
-    The OCR1A register is set to <span data-var="ocr1a" data-format="0x%x" class="TKNumberField"></span>
-    </p>
-    <p>
-    TOP is <span data-var="top" data-format="0x%x" class="TKAdjustableNumber"></span>.
-    </p>
+    <table>
+    <tr>
+    <td>Clock Select</td>
+    <td><span data-var='csmode'></span></td>
+    </tr>
+    <tr>
+    <td>Wave Generation Mode</td>
+    <td><span data-var='wgmmode'></span></td>
+    </tr>
+    <tr data-var="show_icr" class="TKIf">
+    <td>ICR1</td>
+    <td><span data-var="icr1" data-format="0x%x" class="TKNumberField"></span></td>
+    </tr>
+    <tr>
+    <td>OCR1A</td>
+    <td><span data-var='ocr1a' class='TKAdjustableNumber' data-step='16' data-format="0x%x"></span></td>
+    </tr>
+    </table>
     <div id='code-generate'>
     </div>
   </div>
