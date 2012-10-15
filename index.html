@@ -93,6 +93,7 @@ function setUpTangle () {
 
       this.show_icr = [8, 10, 12, 14].indexOf(this.wgmmode) !== -1;
 
+      document.getElementById('code-generate').innerHTML = generateCode(this);
       var canvasEl = document.getElementById('timer-vis-plot');
       var timer = new TimerGraph(canvasEl, this.wgmmode, this.csmode, this.com, this.ocr1a, this.icr1);
       timer.plot();
