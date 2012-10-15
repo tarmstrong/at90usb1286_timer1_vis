@@ -119,13 +119,13 @@ TimerGraph.prototype.isOn = function (tcnt) {
     return false;
   }
   else if (this.ocr1a > this.top) {
-    return com3;
-  }
-  else if (tcnt > this.ocr1a) {
     return !com3;
   }
-  else {
+  else if (tcnt > this.ocr1a) {
     return com3;
+  }
+  else {
+    return !com3;
   }
 };
 
@@ -156,7 +156,8 @@ TimerGraph.prototype.drawGraph = function () {
     this.ctx.stroke();
   }
 
-  var duty = Math.min(5, Math.max(((this.com == 3) ? (this.ocr1a/this.top) : (1 - this.ocr1a/this.top)) * 5.0, 0));
+  // FIXME this should be its own method
+  var duty = Math.min(5, Math.max(((this.com == 2) ? (this.ocr1a/this.top) : (1 - this.ocr1a/this.top)) * 5.0, 0));
   this.ctx.beginPath();
   this.ctx.fillStyle = 'black';
   this.ctx.fillText("v = " + sprintf("%.2f V", duty), this.originX - 90, this.originY + 55);
