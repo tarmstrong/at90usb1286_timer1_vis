@@ -36,7 +36,7 @@ function generateCode(t) {
   if (t.wgm10) {
     tccr1a.push("(1 << WGM10)");
   }
-  out.push("TCCR1A |= " + tccr1a.join(" | ") + ";");
+  out.push("TCCR1A = " + tccr1a.join(" | ") + ";");
   if (t.wgm13) {
     tccr1b.push("(1 << WGM13)");
   }
@@ -52,7 +52,7 @@ function generateCode(t) {
   if (t.cs10) {
     tccr1b.push("(1 << CS10)");
   }
-  out.push("TCCR1B |= " + tccr1b.join(" | ") + ";");
+  out.push("TCCR1B = " + tccr1b.join(" | ") + ";");
   out.push("OCR1A = " + t.ocr1a + ";");
   out.push("ICR1 = " + t.icr1 + ";");
   out.push("</code></pre>");
@@ -61,7 +61,7 @@ function generateCode(t) {
 
 function setUpTangle () {
 
-  var container = document.getElementById("timer-vis");
+  var container = document.getElementById("timer-vis-16");
   var tangle = new Tangle(container, {
     initialize: function () {
       this.show_icr = false;
@@ -91,9 +91,7 @@ function setUpTangle () {
 
       this.show_icr = [8, 10, 12, 14].indexOf(this.wgmmode) !== -1;
 
-      var code = document.getElementById('editor').value;
-      eval(code);
-      var canvasEl = document.getElementById('timer-vis-plot');
+      var canvasEl = container.getElementsByClassName('timer-vis-plot')[0];
       try {
         var timer = new TimerGraph(canvasEl, this.wgmmode, this.csmode, this.com, this.ocr1a, this.icr1);
         timer.plot();
@@ -102,20 +100,8 @@ function setUpTangle () {
         document.getElementById('debug').innerHTML = e;
       }
 //      timer1_graph(canvasEl, this.ocr1a, this.top, this.com, this.not_implemented);
-      document.getElementById('code-generate').innerHTML = generateCode(this);
+      container.getElementsByClassName('code-generate')[0].innerHTML = generateCode(this);
     }
-  });
-  window.addEvent('keyup', function () {
-      try {
-        var code = document.getElementById('editor').value;
-        eval(code);
-        tangle.setValue('icr1', tangle.getValue('icr1'));
-//        var timer = new TimerGraph(document.getElementById('timer-vis-plot'), tangle.getValue('wgmmode'), tangle.getValue('csmode'), tangle.getValue('com'), tangle.getValue('ocr1a'), tangle.getValue('icr1'));
-//        timer.plot();
-      }
-      catch (e) {
-        document.getElementById('debug').innerHTML = e;
-      }
   });
 }
 
@@ -131,22 +117,22 @@ function setUpTangle () {
     max-width: 70px;
     width: 70px;
   }
-  #timer-vis {
+  .timer-vis {
     margin: 50px 0 50px 0;
   }
-  #timer-vis .controls {
+  .timer-vis .controls {
     float:left;
     width: 500px;
   }
-  #timer-vis-plot {
+  .timer-vis-plot {
     margin-left: 40px;
   }
-  #editor {
+  .editor {
     float: left;
     width: 500px;
     height: 300px;
   }
-  #code-generate {
+  .code-generate {
     font-size: 10px;
   }
 </style>
@@ -192,7 +178,7 @@ TCCR1B |=  (0 << CS12) | (1 << CS11) | (0 << CS10); // CS = 2.
 
   <p>Below is a plot of TCNT1 values over time, as a function of the TCCR1 registers and the values of the OCR1A and ICR1 registers. It will only display visualizations for Fast PWM modes. You can toggle the values of various bits in the registers to see what they affect in the graph. The diagram will also generate code for you.</p>
 
-  <div id='timer-vis'>
+  <div id='timer-vis-16' class='timer-vis'>
     <div class='controls'>
     <p>
     <table class='reg-control'>
@@ -262,18 +248,11 @@ TCCR1B |=  (0 << CS12) | (1 << CS11) | (0 << CS10); // CS = 2.
     <td><span data-var='ocr1a' class='TKAdjustableNumber' data-step='16' data-format="0x%x"></span></td>
     </tr>
     </table>
-    <div id='code-generate'>
+    <div class='code-generate'>
     </div>
   </div>
-    <canvas id='timer-vis-plot'>
+    <canvas class='timer-vis-plot'>
     </canvas>
-  </div>
-
-  <div>
-    <textarea id='editor'>
-    </textarea>
-    <pre id='debug'>
-    </pre>
   </div>
   </article>
 
